@@ -1,0 +1,49 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+	<title>Pipture mobile site.</title> 
+	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+	<link rel="stylesheet" href="{{MEDIA_URL}}jquery.mobile.css" />
+	<script type="text/javascript" src="{{MEDIA_URL}}jquery.js"></script>
+	<script type="text/javascript" src="{{MEDIA_URL}}jquery.mobile.js"></script>
+	
+<script type="text/javascript">
+$(document).ready(function(){
+	
+	$('video#movie').bind('ended',function(){
+        $.mobile.changePage($('#home'));
+    });
+    
+    $('#home').bind('click',function(){
+        $.mobile.changePage($('#full_text'));
+    });
+
+    $('#full_text').bind('click',function(){
+
+    	browserWidth = $(window).width();
+    	browserHeight = $(window).height();
+
+        $('#movie').width(browserWidth);
+        $('#movie').height(browserHeight);
+        $.mobile.changePage($('#video'));
+    });
+
+});
+</script>
+</head>
+<body>
+    <div data-role="page" id="home" style="background-image:url({{image_url}}); background-repeat: no-repeat; background-size: 100%;">
+    <h3 style="background:white"> {{from}}: {{text_1}}</h3> 
+    </div>
+
+    <div data-role="page" id="video">
+            <video id="movie" controls>
+                 <source src="{{video_url}}" />
+            </video>
+    </div>
+
+    <div data-role="page" id="full_text" style="background-image:url({{image_url}}); background-repeat: no-repeat; background-size: 100%;">
+    <h3 style="background:white">{{text_2}}</h3>
+    </div>
+</body>
+</html>

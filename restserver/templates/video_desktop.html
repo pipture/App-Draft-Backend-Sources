@@ -1,0 +1,21 @@
+<code><script src="{{MEDIA_URL}}jquery.js"></script>
+<script src="{{MEDIA_URL}}mediaelement-and-player.js"></script>
+<link rel="stylesheet" href="{{MEDIA_URL}}mediaelementplayer.css" /></code>
+
+
+<p>{{from}}: {{text_1}}</p>
+<video src="{{video_url}}" width="400" height="600" poster="{{image_url}}"></video>
+<p>Full message: {{text_2}}</p>
+<script type="text/javascript">
+$(document).ready(function(){
+
+	// using jQuery
+	$('video,audio').mediaelementplayer({features: ['playpause','progress','volume','fullscreen']});
+	
+//	mediaelementplayer.play();
+//	$(document).width();
+
+});
+</script>
+
+

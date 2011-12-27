@@ -1,0 +1,27 @@
+#DB Section
+#settings of your prepeared db
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql', 
+        'NAME': 'pipture_db',
+        'USER': 'pipture_usr',
+        'PASSWORD': 'pipturepasswordwashere',
+        'HOST': '',
+        'PORT': '',
+    }
+}
+
+#Amazon S3 section
+
+USE_AMAZON_S3 = True
+DEFAULT_BUCKET = 'for_example_com_pipture_bucket'
+BUCKET_NAME = 'for_example_com_pipture_bucket'
+AWS_ACCESS_KEY_ID = 'SECRETKEYFROMAMAZON'
+AWS_SECRET_ACCESS_KEY = 'enter/the/secret/access/key/here'
+
+DEBUG = False
+
+ADMINS = (
+     ('MBoyarskiy', 'mboyarskiy@thumbtack.net'),
+)

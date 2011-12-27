@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block page_title %} Pipture Media Manager {% endblock %}
+
+    {% block content %}
+		
+		<style type="text/css">
+		    
+			
+		</style>
+		<div>
+		
+			<table>
+			  <tr>
+				<td style = "vertical-align:top;">
+		  <fieldset>
+		      <legend>TimeSlots:</legend>
+
+		    	Time Slots: <select id="chosen_timeslot" style="width: 300px;"></select>
+		    	<input type="button" id="save_timeslot" value="Save TimeSlot"></input>
+		    	
+		    	<br>
+		    	<p>There are videos:</p>
+				<p>(doulbe click on video to remove it from timeslot)</p>
+				<p>(Drag videos to change their order)</p>
+				<div id ="videos_in_timeslot_div">
+		    	<ul id="videos_in_timeslots">
+		    	</ul>
+				</div>
+						
+		  </fieldset>				
+				</td>
+				
+				<td style = "vertical-align:top;">
+		  <fieldset>
+		      <legend>Episodes:</legend>
+				Choose album: <select id="chosen_album" style="width: 150px;"></select>
+		    	<p>There are episodes in album:</p>
+		    	<p>(doulbe click on video to add it in timeslot)</p>
+		    	<div id ="videos_in_album_div">
+		    	<ul id="videos_in_album">
+		    	</ul>
+		    	</div>				
+		  </fieldset>				
+				</td>				
+				
+				<td style = "vertical-align:top;">
+		  <fieldset>
+		      <legend>Trailers:</legend>
+		    	<p>There are trailers:</p>
+		    	<p>(doulbe click on trailer to add it in timeslot)</p>
+		    	<div id ="videos_in_trailers_div">
+		    	<ul id="videos_in_trailres">
+		    	</ul>
+		    	</div>				
+		  </fieldset>				
+				</td>
+				
+			  </tr>
+			</table>		
+
+		  
+
+
+
+		  
+		  
+		</div>
+		
+		
+    {% endblock %}
+
+    {% block JS %}
+			<script type="text/javascript">
+			
+		
+			function isArray(obj) {
+			    return obj.constructor == Array;
+			}
+
+			function isObject(obj) {
+			    return obj.constructor == Object;
+			}
+			
+			
+			ui_videos_in_album_dblclicked
+			function ui_videos_in_album_dblclicked (){
+				alert($(this).val())
+			};
+
+			function refresh_timeslot_videos (){
+				$("#videos_in_timeslots").empty();
+				var chosen_timeslot = $("#chosen_timeslot").val();
+
+				$.get('/manage/get_timeslot_videos/', {'chosen_timeslot': chosen_timeslot }, function(data) {
+					$("#videos_in_timeslots").empty();
+					videos = $.parseJSON(data);
+					is_array = isArray(videos);
+					if (is_array) {
+						for (i in videos) {
+							$("#videos_in_timeslots").append( $("<li class='ui_videos_in_timeslots' pip_id="+videos[i]['id']+"  pip_type="+videos[i]['type']+" value='"+videos[i]['type']+"' >"+videos[i]['title']+"</li>") );
+						};
+					} else {
+					alert ("There is server answer:" + data);	
+					}
+					});
+			};
+			
+
+			function refresh_album_videos (){
+				$("#videos_in_album").empty();
+				var chosen_album = $("#chosen_album").val();
+
+				$.get('/manage/get_album_videos/', {'chosen_album': chosen_album }, function(data) {
+					$("#videos_in_album").empty();
+					videos = $.parseJSON(data);
+					is_array = isArray(videos);
+					if (is_array) {
+						for (i in videos) {
+							$("#videos_in_album").append( $("<li class='ui_videos_in_album' pip_id="+videos[i]['id']+" pip_title='"+videos[i]['title']+"' >"+videos[i]['title']+"</li>") );
+						};
+					} else {
+					alert ("There is server answer:" + data);	
+					}
+					});
+			};
+
+			
+			function fill_timeslots (){
+				$("#chosen_timeslot").empty();
+				
+				$.get('/manage/get_timeslots/', function(data) {
+					var timeslots = $.parseJSON(data)
+					is_obj = isObject(timeslots);
+					if (is_obj){
+					$("#chosen_timeslot").empty();
+						for (i in timeslots) {
+							$("#chosen_timeslot").append( $("<option value="+i+">"+timeslots[i]+"</option>") );
+						};
+					} else {
+						alert ("Server response:" + data);	
+					}
+					refresh_timeslot_videos();
+					});
+			};
+
+
+			
+			function fill_albums (){
+				$("#chosen_album").empty();
+				
+				$.get('/manage/get_albums/', function(data) {
+					
+					var albums = $.parseJSON(data)
+					is_obj = isObject(albums);
+					if (is_obj){
+					$("#chosen_album").empty();
+						for (i in albums) {
+							$("#chosen_album").append( $("<option value="+i+">"+albums[i]+"</option>") );
+						};
+					} else {
+					alert ("Server response:" + data);	
+					}
+					refresh_album_videos()
+					});
+			};
+
+			
+
+			function refresh_trailers (){
+				$("#videos_in_trailres").empty();
+				$.get('/manage/get_trailers/', function(data) {
+					$("#videos_in_trailres").empty();
+					videos = $.parseJSON(data);
+					is_array = isArray(videos);
+					if (is_array) {
+						for (i in videos) {
+							$("#videos_in_trailres").append( $("<li class='ui_trailers' pip_id="+videos[i]['id']+" pip_title='"+videos[i]['title']+"' >"+videos[i]['title']+"</li>") );
+						};
+					} else {
+					alert ("There is server answer:" + data);	
+					}
+					});
+			};
+
+			
+			function videos_in_album_clicked(id, title) {
+				$("#videos_in_timeslots").append( $("<li class='ui_videos_in_timeslots' pip_id="+id+"  pip_type="+"E"+" pip_title='"+title+"' >"+title+"</li>") );
+			}
+
+			function videos_in_trailers_clicked(id, title) {
+				$("#videos_in_timeslots").append( $("<li class='ui_videos_in_timeslots' pip_id="+id+"  pip_type="+"T"+" pip_title='"+title+"' >"+title+"</li>") );
+			}
+			
+			
+			function videos_in_timeslot_clicked(obj) {
+				obj.remove();
+			}
+
+			
+			$(function() {
+				$( "#videos_in_timeslots" ).sortable();
+				$( "#videos_in_timeslots" ).disableSelection();
+			});				
+			
+			function save_timeslot_clicked() {
+				var result = {};
+				result['TimeSlotId'] = $("#chosen_timeslot").val();
+				result['TimeSlotVideos'] = [];
+				order = 0;
+				$('#videos_in_timeslots').children().each(function(){
+					
+						order = order + 1
+						current_li = $(this);
+						pip_id = current_li.attr('pip_id');
+						pip_type = current_li.attr('pip_type');
+						result['TimeSlotVideos'].push({'Order':order, 'LinkType':pip_type,'LinkId':pip_id});
+
+				});
+				
+				var result_json = JSON.stringify(result);
+				var answer = $.post('/manage/set_timeslot/',{'result_json': result_json, 'csrfmiddlewaretoken': '{{ csrf_token }}'})
+				.success(function() { alert(answer.responseText); })
+				.error(function() { alert("Search wasn's saved. Server error"); })
+
+			}
+
+			function update_all() {
+				fill_timeslots();
+				fill_albums();
+				refresh_trailers();
+			}
+
+			
+			$(document).ready(function(){
+			$.ajax({async: true});
+				
+			update_all()
+			
+			
+			$('#save_timeslot').click(function() {save_timeslot_clicked()});
+			$("#videos_in_album_div li").live('dblclick', function(e) { 
+				return videos_in_album_clicked($(this).attr('pip_id'),$(this).attr('pip_title')); 
+			});
+
+			$("#videos_in_trailers_div li").live('dblclick', function(e) { 
+				return videos_in_trailers_clicked($(this).attr('pip_id'),$(this).attr('pip_title')); 
+			});
+
+			
+			
+			$("#videos_in_timeslot_div li").live('dblclick', function(e) { 
+				return videos_in_timeslot_clicked($(this)); 
+			});
+			
+			$("#chosen_timeslot").change(function(){refresh_timeslot_videos()});
+			$("#chosen_album").change(function(){refresh_album_videos()});
+			});
+			</script>
+	{% endblock %}
+    

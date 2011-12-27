@@ -1,0 +1,15 @@
+<html>
+	<head>
+   	<link href="{{MEDIA_URL}}style.css" rel="stylesheet" type="text/css" />
+	<title>{% block page_title %} Pipture {% endblock %}</title>
+	<script type="text/javascript" src="{{MEDIA_URL}}jquery.js"></script>
+	<script type="text/javascript" src="{{MEDIA_URL}}jquery-ui.js"></script>
+    <script type="text/javascript" src="{{MEDIA_URL}}json2.js"></script>
+ 	</head>
+	
+	<body>
+		{% block authorization %} {% endblock %}
+		{% block content %}       {% endblock %}
+		{% block JS%} {% endblock %}
+	</body>
+</html>

@@ -1,0 +1,28 @@
+body {
+  background-color: #FFF;
+  font-size: 1.0em;
+  font-family: "Lucida Grande", Tahoma, Helvetica, sans-serif;
+  color: #564b47;
+  padding: 20px;
+  margin-left: 50px;
+  text-align: left;
+}
+
+#centered { 	
+  text-align: left;
+  vertical-align: middle;	
+  margin: 0px auto;
+  padding: 0px auto;
+  width: auto;
+  background-color: #FFF;
+  border: 1px solid #CCC;
+}
+
+div#content{
+    overflow: auto;
+	border: 1px solid #666;
+    margin: 0 auto;
+    bottom:0;
+    height: 700px;
+    width: 900px;
+}
