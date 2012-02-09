@@ -8,7 +8,8 @@ mobile_uas = [
     'blaz','brew','cell','cldc','cmd-','dang','doco','eric','hipt','inno',
     'ipaq','java','jigs','kddi','keji','leno','lg-c','lg-d','lg-g','lge-',
     'maui','maxo','midp','mits','mmef','mobi','mot-','moto','mwbp','nec-',
-    'newt','noki','oper','palm','pana','pant','phil','play','port','prox',
+    #'newt','noki','oper','palm','pana','pant','phil','play','port','prox',
+    'newt','noki','palm','pana','pant','phil','play','port','prox',
     'qwap','sage','sams','sany','sch-','sec-','send','seri','sgh-','shar',
     'sie-','siem','smal','smar','sony','sph-','symb','t-mo','teli','tim-',
     'tosh','tsm-','upg1','upsi','vk-v','voda','wap-','wapa','wapi','wapp',
@@ -57,7 +58,8 @@ def index(request, u_url):
         template_h = 'video_mobile.html'
     else:
         #template_h = 'video_mobile.html'
-        template_h = 'video_desktop.html'
+        #template_h = 'video_desktop.html'
+        template_h = 'webpage.html'
  
     text_m = urs_instance.Text 
     data = {'video_url': (video_instance.VideoUrl._get_url()).split('?')[0],

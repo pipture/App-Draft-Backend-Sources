@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from django.db import models
+from django.db.models import F
+
 from restserver.s3.s3FileField import S3EnabledFileField
 from restserver.rest_core.views import local_date_time_date_time_to_UTC_sec
 import datetime
 import calendar
+
 
 from decimal import Decimal
 
@@ -12,9 +15,13 @@ from django.conf import settings
 
 from django.core.exceptions import ValidationError
 
+from django.db.models.signals import post_save
+
 from django.contrib import admin
 
 import uuid
+
+
 
 class Videos(models.Model):
     VideoId = models.AutoField (primary_key=True)
@@ -44,15 +51,19 @@ class Trailers(models.Model):
     Title = models.CharField (unique=True, max_length=100)
     Line1 = models.CharField (blank=True, max_length=500)
     Line2 = models.CharField (blank=True, max_length=500)
-    Line3 = models.CharField (blank=True, max_length=500)
-    Thumbnail = S3EnabledFileField (help_text='Thumbnail',upload_to=u'documents/')
     SquareThumbnail = S3EnabledFileField (upload_to=u'documents/', verbose_name="Screenshot")
 
+
+    @property
+    def complexName(self):
+        return "%s, %s, %s" % (self.Title, self.Line1, self.Line2 )
+
+
     def __unicode__(self):
-        return "%s" % (self.Title)
+        return self.complexName
 
     def __str__(self):
-        return "%s" % (self.Title)
+        return self.complexName
 
     class Admin:
         pass
@@ -60,6 +71,7 @@ class Trailers(models.Model):
     class Meta:
         verbose_name = "Trailer"
         verbose_name_plural = "Trailers"
+        ordering = ['Title', 'Line1', 'Line2']
 
     def delete (self):        
         return "You couldn't delete video. It maybe in timeslot."
@@ -68,13 +80,12 @@ class Trailers(models.Model):
 class Series(models.Model):
     SeriesId = models.AutoField (primary_key=True)
     Title = models.CharField (unique=True, max_length=100)
-    CloseupBackground = S3EnabledFileField (verbose_name='Closeup Background', upload_to=u'documents/')
 
     def __unicode__(self):
-        return "%s: %s" % (self.SeriesId, self.Title)
+        return "%s" % (self.Title)
 
     def __str__(self):
-        return "%s: %s" % (self.SeriesId, self.Title)
+        return "%s" % (self.Title)
 
     class Admin:
         pass
@@ -82,7 +93,7 @@ class Series(models.Model):
     class Meta:
         verbose_name = "Series"
         verbose_name_plural = "Series"
-        ordering = ['SeriesId']
+        ordering = ['Title']
         
     
 class Albums(models.Model):
@@ -91,20 +102,24 @@ class Albums(models.Model):
     TrailerId = models.ForeignKey (Trailers, verbose_name='Trailer for Album')
     Description = models.CharField (max_length=500)
     Season = models.CharField (max_length=100)
-    Title = models.CharField (unique=True, max_length=100)
+    Title = models.CharField (max_length=100)
     Rating = models.CharField (max_length=100)
     Description = models.CharField (max_length=500)
     Credits = models.CharField (blank=True, max_length=500)
-    Cover = S3EnabledFileField (upload_to=u'documents/') 
-    Thumbnail = S3EnabledFileField (upload_to=u'documents/')
-    CloseUpBackground = S3EnabledFileField (verbose_name='CloseUp Background', upload_to=u'documents/')
-    SquareThumbnail = S3EnabledFileField (verbose_name='Screenshot', upload_to=u'documents/')
+    Cover = S3EnabledFileField (upload_to=u'documents/', verbose_name='Landscape') 
+    Thumbnail = S3EnabledFileField (upload_to=u'documents/', verbose_name='Cover Thumbnail')
+    CloseUpBackground = S3EnabledFileField (verbose_name='Cover', upload_to=u'documents/')
+    SquareThumbnail = S3EnabledFileField (verbose_name='Default Screenshot', upload_to=u'documents/')
+
+    @property
+    def complexName(self):
+        return "%s, S%s, A%s" % (self.SeriesId.Title, self.Season, self.Title)
 
     def __unicode__(self):
-        return "%s: %s" % (self.AlbumId, self.Description)
+        return self.complexName
 
     def __str__(self):
-        return "%s: %s" % (self.AlbumId, self.Description)
+        return self.complexName
 
     class Admin:
         pass
@@ -112,7 +127,7 @@ class Albums(models.Model):
     class Meta:
         verbose_name = "Album"
         verbose_name_plural = "Albums"    
-        ordering = ['SeriesId']
+        ordering = ['SeriesId__Title', 'Season', 'Title']
 
 
 class AlbumScreenshotGallery(models.Model):
@@ -130,59 +145,68 @@ class AlbumScreenshotGallery(models.Model):
     def __str__(self):
         return "Album: %s; Screenshot: %s." % (self.AlbumId.Description, self.Description)
 
+    def get_queryset(self):
+        return AlbumScreenshotGallery.objects.sort('Description')
+
     class Admin:
         pass
 
     class Meta:
         verbose_name = "Album Screenshot Gallery"
-        verbose_name_plural = "Album Screenshots Gallery"    
-
+        verbose_name_plural = "Album Screenshots Gallery"
 
 class Episodes(models.Model):
     EpisodeId = models.AutoField (primary_key=True)
     Title = models.CharField (unique=True, max_length=100)
     VideoId = models.ForeignKey (Videos, verbose_name='Video for episode')
     AlbumId = models.ForeignKey (Albums, verbose_name='Album for episode')
-    CloseUp = S3EnabledFileField (upload_to=u'documents/')
-    CloseUpThumbnail = S3EnabledFileField (verbose_name='CloseUp Thumbnail', upload_to=u'documents/')
+    CloseUpThumbnail = S3EnabledFileField (verbose_name='Video Thumbnail', upload_to=u'documents/')
     SquareThumbnail = S3EnabledFileField (verbose_name='Screenshot', upload_to=u'documents/')
-    EpisodeNo = models.CharField (max_length=10)
+    EpisodeNo = models.IntegerField ()
     Script = models.CharField (blank=True,max_length=500)
-    DateReleased = models.DateField(verbose_name='Date released')
+    DateReleased = models.DateTimeField(verbose_name='Date released', help_text="Please, do set Date Release like 2011-11-05 00:00")
     Subject = models.CharField (max_length=500)
     Keywords = models.CharField (max_length=500)
     SenderToReceiver = models.CharField (verbose_name="Sender to receiver", max_length=500)
 
+    @property
+    def complexName (self):
+        return "%s, S%s, A%s, E%s ,%s" %(self.AlbumId.SeriesId.Title, self.AlbumId.Season, self.AlbumId.Title, self.episodeNoInt, self.Title)
+    
+    @property
+    def episodeNoInt(self):
+        return '%0*d' % (4, self.EpisodeNo)
+
     def __unicode__(self):
-        return "%s: %s from album %s" %(self.EpisodeId, self.Title, self.AlbumId)
+        return self.complexName
 
     def __str__(self):
-        return "%s: %s from album %s" %(self.EpisodeId, self.Title, self.AlbumId)
+        return self.complexName
 
     class Admin:
         pass
 
     class Meta:
         verbose_name = "Episode"
-        verbose_name_plural = "Episodes"    
-        ordering = ['AlbumId']
+        verbose_name_plural = "Episodes"  
+        ordering = ['AlbumId__SeriesId__Title', 'AlbumId__Season', 'AlbumId__Title', 'EpisodeNo',  'Title']  
         
     def delete (self):        
         return "You couldn't delete video. It maybe in timeslot."
+
 
 class TimeSlots(models.Model):
 
     
     TimeSlotsId = models.AutoField(primary_key=True)
-    StartTime = models.DateTimeField(verbose_name="Start UTC time")
-    EndTime = models.DateTimeField(verbose_name="End UTC time")
+    StartTime = models.DateTimeField(verbose_name="Start time")
+    EndTime = models.DateTimeField(verbose_name="End time")
     AlbumId = models.ForeignKey (Albums, verbose_name="Choose timeslot album")
     ScheduleDescription = models.CharField (blank=True, max_length=50, verbose_name="Schedule description")
-
     @property
     def StartDateUTC(self):
         start_date = datetime.datetime.fromtimestamp(self.StartTimeUTC)
-        return "%s" % (start_date)#start_date.year,start_date.month, start_date.day)  
+        return "%s" % (start_date)  
     
     @property
     def StartTimeUTC(self):
@@ -192,13 +216,21 @@ class TimeSlots(models.Model):
     def EndTimeUTC(self):
         return local_date_time_date_time_to_UTC_sec(self.EndTime)
 
+    @property
+    def complexName(self):
+        from restserver.pipture.middleware import threadlocals
+        from restserver.pipture.admin import from_utc_to_local
+        user = threadlocals.get_current_user()
+        user_tz = user.get_profile().timezone
+        return "%s, A%s, %s" % (self.AlbumId.SeriesId.Title, self.AlbumId.Title, from_utc_to_local (user_tz, self.StartTime))
+
     
     def __unicode__(self):
-        return "%s at %s - %s" % (self.TimeSlotsId, self.StartTime, self.EndTime)
+        return self.complexName
 
     def __str__(self):
-        return "%s at %s - %s" % (self.TimeSlotsId, self.StartTime, self.EndTime)
-
+        return self.complexName
+    
     def is_current (self):
         today = datetime.datetime.utcnow()
         sec_utc_now = calendar.timegm(today.timetuple())
@@ -233,16 +265,8 @@ class TimeSlots(models.Model):
     class Meta:
         verbose_name = "Time slot"
         verbose_name_plural = "Time slots"    
-        ordering = ['-StartTime']
-    #===========================================================================
-    # def save(self, force_insert=False, force_update=False):
-    #    if self.name != self.__original_name:
-    #      # name changed - do something
-    #    
-    #    super(Person, self).save(force_insert, force_update)
-    #    self.__orginal_name = self.name
-    #===========================================================================
-            
+        ordering = ['AlbumId__SeriesId__Title', 'AlbumId__Title', 'StartTime']
+
 class TimeSlotVideos(models.Model):
 
     LINKTYPE_CHOICES = (
@@ -421,16 +445,68 @@ class SendMessage(models.Model):
     Url = models.CharField(max_length=36, primary_key=True, default=uuid.uuid4)
     UserId = models.ForeignKey (PipUsers)
     Text = models.CharField (max_length=200)
-    Timestamp = models.DateField(auto_now_add=True)
+    Timestamp = models.DateTimeField(auto_now_add=True)
     LinkId = models.IntegerField (db_index=True)
     LinkType=  models.CharField(db_index=True, max_length=1, choices=LINKTYPE_CHOICES)
     UserName = models.CharField (max_length=200)
     ScreenshotURL = models.CharField (blank=True, null=True,  max_length=200)
 
     class Meta:
-        verbose_name = "Sended message"
-        verbose_name_plural = "Sended messages"    
+        verbose_name = "Sent Message"
+        verbose_name_plural = "Sent Messages"    
         ordering = ['-Timestamp']
+
+
+from django.contrib.auth.models import User
+
+US_TIMEZONES = (
+                ('America/New_York', 'America/New_York'), 
+                ('America/Detroit', 'America/Detroit'), 
+                ('America/Kentucky/Louisville', 'America/Kentucky/Louisville'), 
+                ('America/Kentucky/Monticello', 'America/Kentucky/Monticello'), 
+                ('America/Indiana/Indianapolis', 'America/Indiana/Indianapolis'), 
+                ('America/Indiana/Vincennes', 'America/Indiana/Vincennes'), 
+                ('America/Indiana/Winamac', 'America/Indiana/Winamac'), 
+                ('America/Indiana/Marengo', 'America/Indiana/Marengo'), 
+                ('America/Indiana/Petersburg', 'America/Indiana/Petersburg'), 
+                ('America/Indiana/Vevay', 'America/Indiana/Vevay'), 
+                ('America/Chicago', 'America/Chicago'), 
+                ('America/Indiana/Tell_City', 'America/Indiana/Tell_City'), 
+                ('America/Indiana/Knox', 'America/Indiana/Knox'), 
+                ('America/Menominee', 'America/Menominee'), 
+                ('America/North_Dakota/Center', 'America/North_Dakota/Center'), 
+                ('America/North_Dakota/New_Salem', 'America/North_Dakota/New_Salem'), 
+                ('America/North_Dakota/Beulah', 'America/North_Dakota/Beulah'), 
+                ('America/Denver', 'America/Denver'), 
+                ('America/Boise', 'America/Boise'), 
+                ('America/Shiprock', 'America/Shiprock'), 
+                ('America/Phoenix', 'America/Phoenix'), 
+                ('America/Los_Angeles', 'America/Los_Angeles'), 
+                ('America/Anchorage', 'America/Anchorage'), 
+                ('America/Juneau', 'America/Juneau'), 
+                ('America/Sitka', 'America/Sitka'), 
+                ('America/Yakutat', 'America/Yakutat'), 
+                ('America/Nome', 'America/Nome'), 
+                ('America/Adak', 'America/Adak'), 
+                ('America/Metlakatla', 'America/Metlakatla'), 
+                ('Pacific/Honolulu', 'Pacific/Honolulu'),
+                ('Asia/Omsk', 'Asia/Omsk'),
+                 
+                )
+
+class UserProfile(User):  
+    user = models.OneToOneField(User, editable=False)  
+    #other fields here
+    timezone = timezone = models.CharField(max_length=50, default='America/New_York', choices = US_TIMEZONES)
+
+    def __str__(self):  
+          return "%s's profile" % self.user
+
+def create_user_profile(sender, instance, created, **kwargs):  
+    if created:  
+       profile, created = UserProfile.objects.get_or_create(user=instance)  
+
+post_save.connect(create_user_profile, sender=User) 
 
 def install(**kwargs):
     

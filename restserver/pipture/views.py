@@ -17,30 +17,13 @@ from django.contrib.admin.views.decorators import staff_member_required
 
 @staff_member_required
 def index (request):
-    data = {}
+    data = {'timeslots': TimeSlots.objects.all(),
+            'albums': Albums.objects.all(),
+            'trailers': Trailers.objects.all()}
     return render_to_response('TimeSlotManage.html', data,
                                        context_instance=RequestContext(request))        
 
 #----------------actual----------------------------
-@staff_member_required
-def get_timeslots(request):
-    try:
-        timeslots = TimeSlots.objects.all()
-    except Exception as e:
-        result =  "There is internal error: %s (%s)." % (e, type (e))
-    else:
-        result =  dict([(timeslot.TimeSlotsId, str(timeslot)) for timeslot in timeslots])
-    return HttpResponse (json.dumps(result))
-
-@staff_member_required
-def get_albums(request):
-    try:
-        albums = Albums.objects.all()
-    except Exception as e:
-        result =  "There is internal error: %s (%s)." % (e, type (e))
-    else:
-        result =  dict([(album.AlbumId, album.Title) for album in albums])
-    return HttpResponse (json.dumps(result))
 
 def get_timeslot_entity_by_id (id):
     try:
@@ -73,7 +56,7 @@ def get_episode_title_by_id (id):
     except:
         return None
     else:
-        return episode.Title
+        return episode.complexName
 
 def get_trailer_title_by_id (id):
     try:
@@ -81,7 +64,7 @@ def get_trailer_title_by_id (id):
     except:
         return None
     else:
-        return trailer.Title    
+        return trailer.complexName    
 
 @staff_member_required    
 def get_timeslot_videos(request):
@@ -125,22 +108,10 @@ def get_album_videos(request):
         result = "There is no album for chosen_album in params."
     else:
         result = []
-        episodes = Episodes.objects.filter(AlbumId=album)
+        episodes = Episodes.objects.filter(AlbumId=album).extra(order_by = ['EpisodeNo'])
         for episode in episodes:
-            per_episode = {'id': episode.EpisodeId, 'title': episode.Title }
+            per_episode = {'id': episode.EpisodeId, 'title': episode.complexName }
             result.append (per_episode)
-    return HttpResponse (json.dumps(result))
-
-@staff_member_required
-def get_trailers(request):
-    if request.method != 'GET':
-        return HttpResponse ("There is GET method only.")
-
-    result = []
-    trailers = Trailers.objects.all()
-    for trailer in trailers:
-        per_trailer = {'id': trailer.TrailerId, 'title': trailer.Title }
-        result.append (per_trailer)
     return HttpResponse (json.dumps(result))
 
 @staff_member_required

@@ -80,6 +80,7 @@ def getTimeslots (request):
         slot["EndTime"] = ts.EndTimeUTC
         slot["ScheduleDescription"] = ts.ScheduleDescription
         slot["Title"] = ts.AlbumId.SeriesId.Title
+        slot["AlbumId"] = ts.AlbumId.AlbumId
         slot["CloseupBackground"] = (ts.AlbumId.CloseUpBackground._get_url()).split('?')[0]
         if ts.is_current():
             slot["TimeslotStatus"] = 2
@@ -93,6 +94,7 @@ def getTimeslots (request):
         
         timeslots_json.append(slot)
     response['Timeslots'] = timeslots_json
+    response['CurrentTime'] = sec_utc_now
     return HttpResponse (json.dumps(response))
         
 def get_video_url_from_episode_or_trailer (id, type_r, is_url = True):
@@ -304,8 +306,7 @@ def getPlaylist (request):
             else:
                 response["Videos"].append({"Type": "Trailer", "TrailerId": video.TrailerId, 
                                            "Title": video.Title, "Line1": video.Line1,
-                                           "Line2": video.Line2, "Line3": video.Line3,
-                                           "Thumbnail": (video.Thumbnail._get_url()).split('?')[0],
+                                           "Line2": video.Line2,
                                            "SquareThumbnail": (video.SquareThumbnail._get_url()).split('?')[0]})
 
         elif timeslot_video.LinkType == "E":
@@ -317,10 +318,9 @@ def getPlaylist (request):
             else:
                 response["Videos"].append({"Type": "Episode", "EpisodeId": video.EpisodeId, 
                                            "Title": video.Title, "Script": video.Script,
-                                           "DateReleased": "%s" % (video.DateReleased), "Subject": video.Subject,
+                                           "DateReleased": local_date_time_date_time_to_UTC_sec(video.DateReleased), "Subject": video.Subject,
                                            "SenderToReceiver": video.SenderToReceiver, 
                                            "EpisodeNo": video.EpisodeNo,
-                                           "CloseUp": (video.CloseUp._get_url()).split('?')[0],
                                            "CloseUpThumbnail": (video.CloseUpThumbnail._get_url()).split('?')[0],
                                            
                                            'AlbumTitle': video.AlbumId.Title,
@@ -331,7 +331,7 @@ def getPlaylist (request):
                                            "SquareThumbnail": (video.SquareThumbnail._get_url()).split('?')[0]})
     return HttpResponse (json.dumps(response))
 
-def get_album_status (album):
+def get_album_status (album, get_date_only=False):
     from django.db.models import Min
     from restserver.pipture.models import PiptureSettings
     from restserver.pipture.models import Episodes
@@ -339,16 +339,16 @@ def get_album_status (album):
     
     res = Episodes.objects.filter(AlbumId=album).aggregate(Min('DateReleased'))
     min_date = res['DateReleased__min']
+    if get_date_only:
+        min_date = min_date or datetime.datetime(1970, 1, 1, 00, 00)
+        return local_date_time_date_time_to_UTC_sec(min_date)
     if not min_date: return 1#"NORMAL" It means that albums hasn't any episodes 
-    date_utc_now = datetime.datetime.utcnow().date()
+    date_utc_now = datetime.datetime.utcnow()#.date()
     if min_date > date_utc_now: return 3#"COMMING SOON"
     premiere_days = PiptureSettings.objects.all()[0].PremierePeriod
     timedelta_4 = datetime.timedelta(days=premiere_days)
     if min_date >= (date_utc_now - timedelta_4): return 2#"PREMIERE"
     return 1#"NORMAL"
-     
-    return min_date
-    
     
 
 def getAlbums (request):
@@ -382,6 +382,7 @@ def getAlbums (request):
         album_each['SeriesTitle'] = album.SeriesId.Title
         album_each['Title'] = album.Title
         album_each['AlbumStatus'] = get_album_status (album)
+        album_each['ReleaseDate'] = get_album_status (album, get_date_only=True)
         
         albums_json.append(album_each)
     response['Albums'] = albums_json
@@ -400,20 +401,17 @@ def album_json_by_id (album):
     album_json['Description'] = album.Description
     album_json['Rating'] = album.Rating
     album_json['Credits'] = album.Credits
-    
+    album_json['ReleaseDate'] = get_album_status (album, get_date_only=True) 
     return album_json
 
 
 def is_episode_on_air (episode, today):
 
     from restserver.pipture.models import TimeSlotVideos
-    print episode.Title
-    print episode.DateReleased
-    print today
     
-    if episode.DateReleased > today:
+    if episode.DateReleased.date() > today:
         return False
-    if episode.DateReleased < today:
+    if episode.DateReleased.date() < today:
         return True
     
     timeslotvideos = TimeSlotVideos.objects.select_related(depth=1).filter(LinkType="E", LinkId=episode.EpisodeId)
@@ -465,7 +463,7 @@ def getAlbumDetail (request):
         try:
             album = Albums.objects.select_related(depth=1).get(AlbumId=album_id)
         except Albums.DoesNotExist as e:
-            response["Error"] = {"ErrorCode": "2", "ErrorDescription": "There is no Albuum with id %s." % (album_id)}
+            response["Error"] = {"ErrorCode": "2", "ErrorDescription": "There is no Album with id %s." % (album_id)}
             return HttpResponse (json.dumps(response))
 
     if timeslot_id:        
@@ -492,8 +490,7 @@ def getAlbumDetail (request):
     
     response["Trailer"] ={"Type": "Trailer", "TrailerId": trailer.TrailerId, 
                                "Title": trailer.Title, "Line1": trailer.Line1,
-                               "Line2": trailer.Line2, "Line3": trailer.Line3,
-                               "Thumbnail": (trailer.Thumbnail._get_url()).split('?')[0],
+                               "Line2": trailer.Line2,
                                "SquareThumbnail": (trailer.SquareThumbnail._get_url()).split('?')[0]}
     
 
@@ -515,10 +512,9 @@ def getAlbumDetail (request):
                     continue
                 response["Episodes"].append({"Type": "Episode", "EpisodeId": episode.EpisodeId, 
                                        "Title": episode.Title, "Script": episode.Script,
-                                       "DateReleased": "%s" % (episode.DateReleased), "Subject": episode.Subject,
+                                       "DateReleased": local_date_time_date_time_to_UTC_sec(episode.DateReleased), "Subject": episode.Subject,
                                        "SenderToReceiver": episode.SenderToReceiver, 
                                        "EpisodeNo": episode.EpisodeNo,
-                                       "CloseUp": (episode.CloseUp._get_url()).split('?')[0],
                                        "CloseUpThumbnail": (episode.CloseUpThumbnail._get_url()).split('?')[0],
                                        "SquareThumbnail": (episode.SquareThumbnail._get_url()).split('?')[0]
                                        })
@@ -576,7 +572,6 @@ def register (request):
         
     response["SessionKey"] = "%s" % (user.Token)
     response["UUID"] = "%s" % (user.UserUID)
-    print response
     return HttpResponse (json.dumps(response))
     
     
@@ -601,7 +596,7 @@ def login (request):
 
     user_uid = request.POST.get('UUID', None)
     if not user_uid:
-        response["Error"] = {"ErrorCode": "1", "ErrorDescription": "Login failed."}
+        response["Error"] = {"ErrorCode": "1", "ErrorDescription": "There is no UUID."}
         return HttpResponse (json.dumps(response))
                 
     try:
@@ -731,8 +726,6 @@ def new_send_message (user, video_id, message, video_type, user_name, screenshot
         print "%s" % (e)
         raise
     return s.Url
-
-
 
 
 @csrf_exempt    
@@ -865,7 +858,7 @@ def getAlbumScreenshotByEpisodeId (EpisodeId):
 
     response["Screenshots"] = []
     try:
-        screenshots = AlbumScreenshotGallery.objects.filter (AlbumId=episode.AlbumId)
+        screenshots = AlbumScreenshotGallery.objects.filter (AlbumId=episode.AlbumId).extra(order_by = ['Description'])
     except AlbumScreenshotGallery.DoesNotExist:
         return HttpResponse (json.dumps(response))
     else:

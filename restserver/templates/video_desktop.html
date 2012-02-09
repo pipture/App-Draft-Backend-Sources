@@ -4,13 +4,13 @@
 
 
 <p>{{from}}: {{text_1}}</p>
-<video src="{{video_url}}" width="400" height="600" poster="{{image_url}}"></video>
+<video src="{{video_url}}" width="400" height="600" poster="{{image_url}}" fullscreen="false"></video>
 <p>Full message: {{text_2}}</p>
 <script type="text/javascript">
 $(document).ready(function(){
 
 	// using jQuery
-	$('video,audio').mediaelementplayer({features: ['playpause','progress','volume','fullscreen']});
+	$('video,audio').mediaelementplayer({features: ['playpause','progress','volume']});
 	
 //	mediaelementplayer.play();
 //	$(document).width();

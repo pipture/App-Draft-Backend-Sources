@@ -1,2 +1,3 @@
 MySQL PiptureAdmin : pipturepasswordwashere
+root:pipture
 local: pipture:pipture

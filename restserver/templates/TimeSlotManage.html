@@ -16,7 +16,13 @@
 		  <fieldset>
 		      <legend>TimeSlots:</legend>
 
-		    	Time Slots: <select id="chosen_timeslot" style="width: 300px;"></select>
+		    	Time Slots: <select id="chosen_timeslot" style="width: 300px;">
+		    	
+		    	{% for ts in timeslots %}
+				 <option value="{{ts.TimeSlotsId}}">"{{ts.complexName}}"</option>
+				{% endfor %}
+		    	
+		    	</select>
 		    	<input type="button" id="save_timeslot" value="Save TimeSlot"></input>
 		    	
 		    	<br>
@@ -34,7 +40,14 @@
 				<td style = "vertical-align:top;">
 		  <fieldset>
 		      <legend>Episodes:</legend>
-				Choose album: <select id="chosen_album" style="width: 150px;"></select>
+				Choose album: <select id="chosen_album" style="width: 150px;">
+				
+				{% for a in albums %}
+				 <option value="{{a.AlbumId}}">"{{a.complexName}}"</option>
+				{% endfor %}
+				
+				
+				</select>
 		    	<p>There are episodes in album:</p>
 		    	<p>(doulbe click on video to add it in timeslot)</p>
 		    	<div id ="videos_in_album_div">
@@ -51,6 +64,11 @@
 		    	<p>(doulbe click on trailer to add it in timeslot)</p>
 		    	<div id ="videos_in_trailers_div">
 		    	<ul id="videos_in_trailres">
+		    	
+		    	{% for t in trailers %}
+		    	<li class="ui_trailers" pip_title="{{t.complexName}}" pip_id="{{t.TrailerId}}">{{t.complexName}}</li>
+				{% endfor %}
+		    	
 		    	</ul>
 		    	</div>				
 		  </fieldset>				
@@ -226,9 +244,11 @@
 			}
 
 			function update_all() {
-				fill_timeslots();
-				fill_albums();
-				refresh_trailers();
+				//fill_timeslots();
+				//fill_albums();
+				refresh_timeslot_videos();
+				refresh_album_videos();
+				//refresh_trailers();
 			}
 
 			
